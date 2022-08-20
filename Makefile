@@ -2,12 +2,14 @@ C:=g++
 SRCEXT:=cpp
 SRCDIR:=src
 BIN:=bin/program
-ifeq '$(OS)' 'Windows_NT'
-BIN:=$(BIN).exe
-endif
 
 CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3
 SRCS:=
+
+ifeq '$(OS)' 'Windows_NT'
+BIN:=$(BIN).exe
+CFLAGS:=-Iinclude -lWs2_32
+endif
 
 .PHONY: client server dirs clean
 client: SRCS+=$(SRCDIR)/client.$(SRCEXT)

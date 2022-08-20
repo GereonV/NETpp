@@ -1,39 +1,26 @@
 C:=g++
 SRCEXT:=cpp
 SRCDIR:=src
-OBJDIR:=obj
 BIN:=bin/program
 ifeq '$(OS)' 'Windows_NT'
 BIN:=$(BIN).exe
 endif
 
-CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion
-LDFLAGS:=
+CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3
+SRCS:=
 
-DEBUGCFLAGS:=-g -D _DEBUG
-DEBUGLDFLAGS:=-g
+.PHONY: client server dirs clean
+client: SRCS+=$(SRCDIR)/client.$(SRCEXT)
+client: $(BIN)
+server: SRCS+=$(SRCDIR)/server.$(SRCEXT)
+server: $(BIN)
 
-RELEASECFLAGS:=-O3
-RELEASELDFLAGS:=
-
-.PHONY: all debug release dirs clean
-all: CFLAGS+=$(DEBUGCFLAGS)
-all: LDFLAGS+=$(DEBUGLDFLAGS)
-all: $(BIN)
-debug: dirs all
-release: CFLAGS+=$(RELEASECFLAGS)
-release: LDFLAGS+=$(RELEASELDFLAGS)
-release: dirs $(BIN)
-OBJS:=$(patsubst $(SRCDIR)/%.$(SRCEXT),$(OBJDIR)/%.o,$(wildcard $(SRCDIR)/*.$(SRCEXT)))
--include $(OBJS:%.o=%.d)
-$(BIN): $(OBJS)
-	$(C) $(OBJS) -o $@ $(LDFLAGS)
-$(OBJDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
-	$(C) -c $< -o $@ -MMD $(CFLAGS)
+$(BIN): clean dirs
+	$(C) $(SRCS) -o $@ $(CFLAGS)
 dirs:
-	mkdir -p $(OBJDIR) $(dir $(BIN))
+	mkdir -p $(dir $(BIN))
 clean:
-	rm -rf $(OBJDIR) $(BIN)
+	rm -rf $(BIN)
 ifneq '$(OS)' 'Windows_NT'
 INSTALLPATH=/usr/local/bin/$(notdir $(BIN))
 .PHONY: install uninstall

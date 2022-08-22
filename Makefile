@@ -5,6 +5,10 @@ BIN:=bin/program
 
 CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3
 SRCS:=
+ifeq '$(OS)' 'Windows_NT'
+BIN:=$(BIN).exe
+CFLAGS+= -LWs2_32
+endif
 
 ifeq '$(OS)' 'Windows_NT'
 BIN:=$(BIN).exe

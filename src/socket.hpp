@@ -140,46 +140,6 @@ namespace net {
         sd_t sock_;
     };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-//     template<bool IP6>
-//     class socket {
-//     public:
-//         socket(bool connectionless)
-//             : sock_{::socket(IP6 ? PF_INET6: PF_INET, connectionless ? SOCK_DGRAM : SOCK_STREAM, 0)} {
-//             if(sock_ == invalid)
-//                 throw std::runtime_error{"socket() failed"};
-//         }
-// 
-//         void close() {
-// #ifdef _WIN32
-//             if(closesocket(sock_))
-//                 throw std::runtime_error{"closesocket() failed"};
-// #else
-//             if(close(sock_))
-//                 throw std::runtime_error{"close() failed"};
-// #endif
-//         }
-// 
-//         ~socket() { try { close(); } catch(std::exception & e) {} }
-// 
-//         // bind
-//     
-//     private:
-//         sd_t sock_;
-//     };
-
     class context {
 #ifdef _WIN32
     public:

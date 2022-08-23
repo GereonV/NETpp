@@ -22,6 +22,7 @@ namespace net::tcp {
         connection(server const & server) : sock_{server.sock_.accept()} {}
         connection(void * addr, context::len_t addr_size) : sock_{addr, addr_size} { sock_.connect(); }
         void send(char const * msg, auto len) { for(auto end = msg + len; len;) len -= sock_.send(end - len, len); }
+        template<std::size_t N> auto recv(char (&buf)[N]) { return sock_.recv(buf, N); }
 
         template<std::size_t N>
         auto operator<<(char const (&msg)[N]) {
@@ -31,13 +32,6 @@ namespace net::tcp {
 
         auto operator<<(auto msg) {
             send(msg.data(), msg.size());
-            return *this;
-        }
-
-        template<std::size_t N>
-        auto operator>>(char (&arr)[N]) {
-            if(sock_.recv(arr, N) != N)
-                throw std::runtime_error{"Not everything read"};
             return *this;
         }
 

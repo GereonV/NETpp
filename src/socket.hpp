@@ -6,7 +6,6 @@
 #include <cstring>
 #include <memory>
 #include <stdexcept>
-#include <string>
 #include <string_view>
 #ifdef _WIN32
 #include <winsock2.h>
@@ -146,25 +145,25 @@ namespace net {
             return s;
         }
 
-        auto send(char const * msg, int len, int flags = 0) const {
+        auto send(char const * msg, std::size_t len, int flags = 0) const {
             if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
             throw context::error("send");
         }
 
-        auto recv(char * buf, int len, int flags = 0) const {
+        auto recv(char * buf, std::size_t len, int flags = 0) const {
             if(auto received = ::recv(sock_, buf, len, flags); received != -1)
                 return received;
             throw context::error("recv");
         }
 
-        auto sendto(char const * msg, int len, int flags = 0) const {
+        auto sendto(char const * msg, std::size_t len, int flags = 0) const {
             if(auto sent = ::sendto(sock_, msg, len, flags, *this, addr_size_); sent != -1)
                 return sent;
             throw context::error("sendto");
         }
 
-        auto recvfrom(char * buf, int len, int flags = 0) {
+        auto recvfrom(char * buf, std::size_t len, int flags = 0) {
             if(auto received = ::recvfrom(sock_, buf, len, flags, *this, &addr_size_); received != -1)
                 return received;
             throw context::error("recvfrom");

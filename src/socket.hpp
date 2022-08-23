@@ -166,6 +166,7 @@ namespace net {
             throw context::error("recvfrom");
         }
 
+        constexpr auto family() const noexcept { return addr_.ss_family; }
         void reset(void * addr, context::len_t addr_size) { std::memcpy(&addr_, addr, addr_size_ = addr_size); }
         void resock(int socktype = STREAM, int protocol = 0) { if((sock_ = ::socket(addr_.ss_family, socktype, protocol)) == context::invalid()) throw context::error("accept"); }
     private:

@@ -103,7 +103,7 @@ namespace net {
         };
     }
 
-    std::unique_ptr<addrinfo, decltype([](addrinfo * ai) { freeaddrinfo(ai); })> endpoints(char const * name, char const * service, int family = ANY, int socktype = STREAM) {
+    std::unique_ptr<addrinfo, decltype([](addrinfo * ai) { freeaddrinfo(ai); })> endpoints(char const * name, char const * service, int socktype = STREAM, int family = ANY) {
         addrinfo hints{
             .ai_flags = AI_PASSIVE, // loopback address if !name
             .ai_family = family,

@@ -40,6 +40,7 @@ namespace net {
         }
 
         static auto gai_error(int ecode) { return error("getaddrinfo", std::to_string(ecode)); }
+        static constexpr in_addr addr(std::uint32_t addr) noexcept { return {{.S_addr = addr}}; }
     private:
         WSADATA wsa_data_;
 #else
@@ -53,6 +54,7 @@ namespace net {
         }
 
         static auto gai_error(int ecode) { return error("getaddrinfo", gai_strerror(ecode)); }
+        static constexpr in_addr addr(std::uint32_t addr) noexcept { return {addr}; }
 #endif
     };
 
@@ -98,22 +100,20 @@ namespace net {
         return {
             .sin_family = AF_INET,
             .sin_port = endian(port),
-            .sin_addr = {endian(ip_addr)},
+            .sin_addr = context::addr(endian(ip_addr)),
             .sin_zero = {}
         };
     }
 
     std::unique_ptr<addrinfo, decltype([](addrinfo * ai) { freeaddrinfo(ai); })> endpoints(char const * name, char const * service, int socktype = STREAM, int family = ANY) {
-        addrinfo hints{
-            .ai_flags = AI_PASSIVE, // loopback address if !name
-            .ai_family = family,
-            .ai_socktype = socktype,
-            .ai_protocol = 0, // automatic based on type
-            .ai_addrlen = 0,
-            .ai_addr = nullptr,
-            .ai_canonname = nullptr,
-            .ai_next = nullptr
-        }, * res;
+        addrinfo hints, * res;
+        hints.ai_flags = AI_PASSIVE; // loopback address if !name
+        hints.ai_family = family;
+        hints.ai_socktype = socktype;
+        hints.ai_addrlen = hints.ai_protocol = 0; // automatic based on type
+        hints.ai_addr = nullptr;
+        hints.ai_canonname = nullptr;
+        hints.ai_next = nullptr;
         if(auto ecode = getaddrinfo(name, service, &hints, &res); ecode)
             throw context::gai_error(ecode);
         return {res, {}};
@@ -146,13 +146,13 @@ namespace net {
         }
 
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
-        auto send(const void * msg, int len, int flags = 0) {
+        auto send(const char * msg, int len, int flags = 0) {
             if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
             throw context::error("send");
         }
 
-        auto recv(void * buf, int len, int flags = 0) {
+        auto recv(char * buf, int len, int flags = 0) {
             if(auto received = ::recv(sock_, buf, len, flags); received != -1)
                 return received;
             throw context::error("recv");

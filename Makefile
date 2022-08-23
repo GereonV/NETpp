@@ -7,12 +7,7 @@ CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3
 SRCS:=
 ifeq '$(OS)' 'Windows_NT'
 BIN:=$(BIN).exe
-CFLAGS+= -LWs2_32
-endif
-
-ifeq '$(OS)' 'Windows_NT'
-BIN:=$(BIN).exe
-CFLAGS:=-Iinclude -lWs2_32
+CFLAGS+= -lWs2_32
 endif
 
 .PHONY: client server dirs clean

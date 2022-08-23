@@ -6,22 +6,56 @@
 #include <cstring>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <string_view>
-#include <utility>
-#include <vector>
 #ifdef _WIN32
-// #include <winsock2.h>
-// #include <Ws2tcpip.h>
+#include <winsock2.h>
+#include <Ws2tcpip.h>
 #else
 #include <sys/socket.h>
-#include <netdb.h> // getaddrinfo() & freeaddrinfo()
-#include <arpa/inet.h>
+#include <netdb.h>
 #include <unistd.h> // close()
 #endif
 
 namespace net {
 
-    inline constexpr int ANY = AF_UNSPEC, IP4 = AF_INET, IP6 = AF_INET6, STREAM = SOCK_STREAM, DATAGRAM = SOCK_DGRAM;
+    inline constexpr int ANY = AF_UNSPEC,
+                         IP4 = AF_INET,
+                         IP6 = AF_INET6,
+                         STREAM = SOCK_STREAM,
+                         DATAGRAM = SOCK_DGRAM;
+
+    class context {
+    public:
+#ifdef _WIN32
+    using socket_t = SOCKET;
+    using len_t = int;
+        context() { if(WSAStartup(MAKEWORD(1, 1), &wsa_data_)) throw error("WSAStartup"); }
+        ~context() { WSACleanup(); }
+        static constexpr socket_t invalid() noexcept { return INVALID_SOCKET; }
+        static void close(socket_t sock) { if(closesocket(sock)) throw error("closesocket"); }
+        static std::runtime_error error(char const * fun, std::string err = std::to_string(GetLastError())) {
+            static std::string s{"() failed ("};
+            return std::runtime_error{fun + s + err + ')'};
+        }
+
+        static auto gai_error(int ecode) { return error("getaddrinfo", std::to_string(ecode)); }
+    private:
+        WSADATA wsa_data_;
+#else
+    using socket_t = int;
+    using len_t = socklen_t;
+        static constexpr socket_t invalid() noexcept { return -1; }
+        static void close(socket_t sock) { if(::close(sock)) throw error("close"); }
+        static std::runtime_error error(char const * fun, std::string err = strerror(errno)) {
+            static std::string s{"() failed: "};
+            return std::runtime_error{fun + s + err};
+        }
+
+        static auto gai_error(int ecode) { return error("getaddrinfo", gai_strerror(ecode)); }
+#endif
+    };
+
 
     constexpr std::uint32_t ip4(char const * addr) noexcept {
         std::uint32_t ip{};
@@ -80,83 +114,54 @@ namespace net {
             .ai_canonname = nullptr,
             .ai_next = nullptr
         }, * res;
-        if(getaddrinfo(name, service, &hints, &res))
-            throw std::runtime_error{"getaddrinfo() failed"};
+        if(auto ecode = getaddrinfo(name, service, &hints, &res); ecode)
+            throw context::gai_error(ecode);
         return {res, {}};
     }
-
-#ifdef _WIN32
-    using sd_t = SOCKET;
-    using len_t = int;
-    inline constexpr sd_t invalid = INVALID_SOCKET;
-    inline constexpr int error = SOCKET_ERROR;
-    inline constexpr auto close_socket = closesocket;
-#else
-    using sd_t = int;
-    using len_t = socklen_t;
-    inline constexpr sd_t invalid = -1;
-    inline constexpr int error = -1;
-    inline constexpr auto close_socket = close;
-#endif
 
     class socket {
     private:
         socket() = default;
     public:
-        socket(void * addr, len_t addr_size, int socktype = STREAM, int protocol = 0) : addr_size_{addr_size} {
+        socket(void * addr, context::len_t addr_size, int socktype = STREAM, int protocol = 0)
+            : addr_size_{addr_size} {
             std::memcpy(&addr_, addr, addr_size_);
             sock_ = ::socket(addr_.ss_family, socktype, protocol);
-            if(sock_ == invalid)
-                throw std::runtime_error{"socket() failed"};
+            if(sock_ == context::invalid())
+                throw context::error("socket");
         }
-        ~socket() { close_socket(sock_); }
-        void close() { if(close_socket(sock_)) throw std::runtime_error{"closing failed"}; }
-        void bind() { if(::bind(sock_, reinterpret_cast<sockaddr const *>(&addr_), addr_size_)) throw std::runtime_error{"bind() failed"}; }
-        void listen(int backlog) { if(::listen(sock_, backlog)) throw std::runtime_error{"listen() failed"}; }
+
+        operator sockaddr *() noexcept { return reinterpret_cast<sockaddr *>(&addr_); }
+        ~socket() { try { context::close(sock_); } catch(std::exception & e) {} }
+        void close() { context::close(sock_); }
+        void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }
+        void listen(int backlog) { if(::listen(sock_, backlog)) throw context::error("listen"); }
         socket accept() {
             socket s;
             s.addr_size_ = sizeof(sockaddr_storage);
-            s.sock_ = ::accept(sock_, reinterpret_cast<sockaddr *>(&s.addr_), &s.addr_size_);
-            if(s.sock_ == invalid)
-                throw std::runtime_error{"accept() failed"};
+            s.sock_ = ::accept(sock_, s, &s.addr_size_);
+            if(s.sock_ == context::invalid())
+                throw context::error("accept");
             return s;
         }
-        void connect() { if(::connect(sock_, reinterpret_cast<sockaddr const *>(&addr_), addr_size_)) throw std::runtime_error{"connect() failed"}; }
+
+        void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         auto send(const void * msg, int len, int flags = 0) {
-            if(auto sent = ::send(sock_, msg, len, flags); sent != error)
+            if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
-            throw std::runtime_error{"send() failed"};
+            throw context::error("send");
         }
 
         auto recv(void * buf, int len, int flags = 0) {
-            if(auto received = ::recv(sock_, buf, len, flags); received != error)
+            if(auto received = ::recv(sock_, buf, len, flags); received != -1)
                 return received;
-            throw std::runtime_error{"recv() failed"};
+            throw context::error("recv");
         }
 
     private:
         sockaddr_storage addr_;
-        len_t addr_size_;
-        sd_t sock_;
-    };
-
-    class context {
-#ifdef _WIN32
-    public:
-        context() {
-            using std::literals;
-            // https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2
-            if(WSAStartup(MAKEWORD(1, 1), &wsa_data_))
-                throw std::runtime_error{"WSAStartup() failed"};
-        }
-
-        ~context() {
-            WSACleanup(); // 0 or SOCKET_ERROR + WSAGetLastError()
-        }
-
-    private:
-        WSADATA wsa_data_;
-#endif
+        context::len_t addr_size_;
+        context::socket_t sock_;
     };
 
 };

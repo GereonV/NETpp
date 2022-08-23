@@ -3,8 +3,10 @@
 
 int main(int argc, char const ** argv) {
 	try {
+		if(argc < 2)
+			throw std::invalid_argument{"No IP address provided"};
 		net::context c;
-		auto ep = net::endpoints(nullptr, "daytime");
+		auto ep = net::endpoints(argv[1], "daytime");
 		net::socket sock{ep->ai_addr, ep->ai_addrlen, ep->ai_socktype, ep->ai_protocol};
 		sock.connect();
 		char buf[256];

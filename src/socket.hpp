@@ -131,36 +131,48 @@ namespace net {
                 throw context::error("socket");
         }
 
-        operator sockaddr *() noexcept { return reinterpret_cast<sockaddr *>(&addr_); }
+        operator auto()       noexcept { return reinterpret_cast<sockaddr       *>(&addr_); }
+        operator auto() const noexcept { return reinterpret_cast<sockaddr const *>(&addr_); }
         ~socket() { try { context::close(sock_); } catch(std::exception & e) {} }
         void close() { context::close(sock_); }
+        void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }
         void listen(int backlog) { if(::listen(sock_, backlog)) throw context::error("listen"); }
-        socket accept() {
+        socket accept() const {
             socket s;
-            s.addr_size_ = sizeof(sockaddr_storage);
             s.sock_ = ::accept(sock_, s, &s.addr_size_);
             if(s.sock_ == context::invalid())
                 throw context::error("accept");
             return s;
         }
 
-        void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
-        auto send(const char * msg, int len, int flags = 0) {
+        auto send(char const * msg, int len, int flags = 0) const {
             if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
             throw context::error("send");
         }
 
-        auto recv(char * buf, int len, int flags = 0) {
+        auto recv(char * buf, int len, int flags = 0) const {
             if(auto received = ::recv(sock_, buf, len, flags); received != -1)
                 return received;
             throw context::error("recv");
         }
 
+        auto sendto(char const * msg, int len, int flags = 0) const {
+            if(auto sent = ::sendto(sock_, msg, len, flags, *this, addr_size_); sent != -1)
+                return sent;
+            throw context::error("sendto");
+        }
+
+        auto recvfrom(char * buf, int len, int flags = 0) {
+            if(auto received = ::recvfrom(sock_, buf, len, flags, *this, &addr_size_); received != -1)
+                return received;
+            throw context::error("recvfrom");
+        }
+
     private:
         sockaddr_storage addr_;
-        context::len_t addr_size_;
+        context::len_t addr_size_{sizeof(sockaddr_storage)};
         context::socket_t sock_;
     };
 

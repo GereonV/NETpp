@@ -21,12 +21,16 @@ namespace net::tcp {
     public:
         connection(server const & server) : sock_{server.sock_.accept()} {}
         connection(void * addr, context::len_t addr_size) : sock_{addr, addr_size} { sock_.connect(); }
+        void send(char const * msg, auto len) { for(auto end = msg + len; len;) len -= sock_.send(end - len, len); }
 
         template<std::size_t N>
-        auto operator<<(char const (&arr)[N]) {
-            auto remaining = N;
-            while(remaining)
-                remaining -= sock_.send(arr + N - remaining, remaining);
+        auto operator<<(char const (&msg)[N]) {
+            send(msg, N);
+            return *this;
+        }
+
+        auto operator<<(auto msg) {
+            send(msg.data(), msg.size());
             return *this;
         }
 

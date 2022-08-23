@@ -3,11 +3,13 @@
 
 int main(int argc, char const ** argv) {
 	try {
-		if(argc < 2)
-			throw std::invalid_argument{"No IP address provided"};
+		if(argc < 3)
+			throw std::invalid_argument{"Provide name and port"};
 		net::context c;
-		auto ep = net::endpoints(argv[1], "13", net::STREAM);
-		std::cout << net::tcp::connection{ep->ai_addr, ep->ai_addrlen};
+		net::tcp::connection conn{net::endpoints(argv[1], argv[2])};
+		char buf[4096];
+		for(auto rcv = conn.recv(buf); rcv; rcv = conn.recv(buf))
+			std::cout.write(buf, rcv);
 	} catch(std::exception & e) {
 		std::cerr << e.what() << '\n';
 		return -1;

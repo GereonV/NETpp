@@ -1,7 +1,7 @@
 #include <ctime>
 #include <iostream>
 #include <string>
-#include "socket.hpp"
+#include "tcp.hpp"
 
 std::string daytime() noexcept {
 	std::time_t now = time(nullptr);
@@ -11,14 +11,11 @@ std::string daytime() noexcept {
 int main() {
 	try {
 		net::context c;
-		auto ep = net::endpoints(nullptr, "daytime", net::STREAM);
-		net::socket sock{ep->ai_addr, ep->ai_addrlen, ep->ai_socktype, ep->ai_protocol};
-		sock.bind();
-		sock.listen(10);
+		auto ep = net::endpoint(net::ip4("127.0.0.1"), 13);
+		net::tcp::server server{&ep, sizeof ep, 10};
 		for(;;) {
-			auto conn = sock.accept();
-			auto str = daytime();
-			conn.send(str.data(), str.size());
+			net::tcp::connection serv{server};
+			serv << daytime();
 		}
 	} catch(std::exception & e) {
 		std::cerr << e.what() << '\n';

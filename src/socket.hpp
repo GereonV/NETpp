@@ -128,6 +128,9 @@ namespace net {
     };
 
     struct socket_properies {
+        socket_properies() = default;
+        constexpr socket_properies(int socktype) : socktype{socktype} {}
+        constexpr socket_properies(int socktype, int protocol) : socktype{socktype}, protocol{protocol} {}
         int socktype{STREAM};
         int protocol{};
     };
@@ -186,26 +189,24 @@ namespace net {
         context::socket_t sock_;
     };
 
-    inline socket connect_to_first(addrinfo const * info, socket_properies prop = {}) {
-        socket sock{*info, prop};
-        auto fam = sock.family();
-        while((info = info->ai_next)) {
-            try {
-                sock.connect();
-                return sock;
-            } catch(std::runtime_error & e) {
-                sock.reset(*info);
-                auto new_fam = sock.family();
-                if(new_fam == fam)
-                    continue;
-                sock.close();
-                sock.resock(prop);
-                fam = new_fam;
-            }
-        }
-        sock.connect();
-        return sock;
-    }
+    template<typename T>
+    class socket_io {
+    friend T;
+    private:
+        socket_io() = default;
+        auto const & sock() const noexcept { return static_cast<T const *>(this)->sock_; }
+    public:
+        auto send(char const * buf, auto len) const { return sock().send(buf, len); }
+        template<std::size_t N> auto send(char const (&buf)[N]) const { return send(buf, N); }
+        void sendall(char const * buf, auto len) const { for(auto end = buf + len; len;) len -= send(end - len, len); }
+        template<std::size_t N> void sendall(char const (&buf)[N]) const { sendall(buf, N); }
+        auto & operator<<(std::string_view msg) const { return sendall(msg.data(), msg.size()), *this; }
+        auto & operator<<(char const * msg) const { return this->operator<<({msg}); }
+        auto recv(char * buf, auto len) const { return sock().recv(buf, len); }
+        template<std::size_t N> auto recv(char (&buf)[N]) const { return recv(buf, N); }
+        void recvall(char * buf, auto len) const { for(auto end = buf + len; len;) len -= recv(end - len, len); }
+        template<std::size_t N> void recvall(char (&buf)[N]) const { recvall(buf, N); }
+    };
 
 };
 

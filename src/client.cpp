@@ -6,7 +6,7 @@ int main(int argc, char const ** argv) {
 		if(argc < 3)
 			throw std::invalid_argument{"Provide name and port"};
 		net::context c;
-		net::tcp::connection conn{net::endpoints(argv[1], argv[2])};
+		net::tcp::connection conn{net::endpoints(argv[1], argv[2]).get()};
 		char buf[4096];
 		for(auto rcv = conn.recv(buf); rcv; rcv = conn.recv(buf))
 			std::cout.write(buf, rcv);

@@ -120,14 +120,29 @@ namespace net {
         return {res, {}};
     }
 
+    struct socket_address {
+        constexpr socket_address(void * addr, context::len_t addr_size) noexcept : data{addr}, size{addr_size} {}
+        constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
+        void * data;
+        context::len_t size;
+    };
+
+    struct socket_properies {
+        int socktype{STREAM};
+        int protocol{};
+    };
+
     class socket {
     private:
         socket() = default;
-    public:
-        socket(void * addr, context::len_t addr_size, int socktype = STREAM, int protocol = 0) { reset(addr, addr_size); resock(socktype, protocol); }
-        ~socket() { try { context::close(sock_); } catch(std::exception & e) {} }
         operator auto()       noexcept { return reinterpret_cast<sockaddr       *>(&addr_); }
         operator auto() const noexcept { return reinterpret_cast<sockaddr const *>(&addr_); }
+    public:
+        socket(socket_address addr, socket_properies prop = {}) { reset(addr); resock(prop); }
+        ~socket() { try { close(); } catch(std::exception & e) {} }
+        constexpr auto family() const noexcept { return addr_.ss_family; }
+        void reset(socket_address addr) { std::memcpy(*this, addr.data, addr_size_ = addr.size); }
+        void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
         void close() { context::close(sock_); }
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }
@@ -165,15 +180,32 @@ namespace net {
                 return received;
             throw context::error("recvfrom");
         }
-
-        constexpr auto family() const noexcept { return addr_.ss_family; }
-        void reset(void * addr, context::len_t addr_size) { std::memcpy(&addr_, addr, addr_size_ = addr_size); }
-        void resock(int socktype = STREAM, int protocol = 0) { if((sock_ = ::socket(addr_.ss_family, socktype, protocol)) == context::invalid()) throw context::error("accept"); }
     private:
         sockaddr_storage addr_;
         context::len_t addr_size_;
         context::socket_t sock_;
     };
+
+    inline socket connect_to_first(addrinfo const * info, socket_properies prop = {}) {
+        socket sock{*info, prop};
+        auto fam = sock.family();
+        while((info = info->ai_next)) {
+            try {
+                sock.connect();
+                return sock;
+            } catch(std::runtime_error & e) {
+                sock.reset(*info);
+                auto new_fam = sock.family();
+                if(new_fam == fam)
+                    continue;
+                sock.close();
+                sock.resock(prop);
+                fam = new_fam;
+            }
+        }
+        sock.connect();
+        return sock;
+    }
 
 };
 

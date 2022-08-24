@@ -12,7 +12,7 @@ int main() {
 	try {
 		net::context c;
 		auto ep = net::endpoint(0, 13);
-		net::tcp::server server{&ep, sizeof(ep), 10};
+		net::tcp::server server{{&ep, sizeof(ep)}, 10};
 		for(;;) {
 			net::tcp::connection serv{server};
 			serv << daytime();

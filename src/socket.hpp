@@ -214,22 +214,18 @@ namespace net {
     };
 
     template<typename T>
-    class socket_io {
-    friend T;
-    private:
-        socket_io() = default;
-        constexpr auto down()       noexcept { return static_cast<T       *>(this); }
-        constexpr auto down() const noexcept { return static_cast<T const *>(this); }
-    public:
-        template<std::size_t N> auto send(char const (&buf)[N]) const { return down()->send(buf, N); }
-        void sendall(char const * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= down()->send(end - len, len); }
-        template<std::size_t N> void sendall(char const (&buf)[N]) const { sendall(buf, N); }
-        auto & operator<<(std::string_view msg) const { return sendall(msg.data(), msg.size()), *this; }
-        auto & operator<<(char const * msg) const { return this->operator<<({msg}); }
-        template<std::size_t N> auto recv(char (&buf)[N]) { return down()->recv(buf, N); }
-        void recvall(char * buf, context::len_t len) { for(auto end = buf + len; len;) len -= down()->recv(end - len, len); }
-        template<std::size_t N> void recvall(char (&buf)[N]) { recvall(buf, N); }
+    struct buffer {
+        constexpr buffer(T * buf, context::len_t len) noexcept : buf{buf}, len{len} {}
+        constexpr buffer(std::string_view sv) noexcept : buf{sv.data()}, len{sv.size()} {}
+        template<std::size_t N> constexpr buffer(T (&buf)[N]) noexcept : buf{buf}, len{N} {}
+        constexpr auto begin() const noexcept { return buf; }
+        constexpr auto end() const noexcept { return buf + len; }
+        T * buf;
+        context::len_t len;
     };
+
+    using in_buffer = buffer<char>;
+    using out_buffer = buffer<char const>;
 
 };
 

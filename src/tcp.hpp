@@ -1,7 +1,6 @@
 #ifndef _NET_TCP_HPP_
 #define _NET_TCP_HPP_
 
-#include <ostream>
 #include "socket.hpp"
 
 namespace net::tcp {
@@ -18,8 +17,7 @@ namespace net::tcp {
         net::socket sock_;
     };
 
-    class connection : public socket_io<connection> {
-    friend socket_io<connection>;
+    class connection {
     public:
         connection(server const & server) : sock_{server.sock_.accept()} {}
         connection(socket_address addr) : sock_{addr} { sock_.connect(); }
@@ -42,9 +40,11 @@ namespace net::tcp {
             sock_.connect();
         }
 
-        using socket_io<connection>::send, socket_io<connection>::recv;
-        auto send(char const * buf, context::len_t len) const { return sock_.send(buf, len); }
-        auto recv(char * buf, context::len_t len) const { return sock_.recv(buf, len); }
+        auto send(out_buffer buf) const { return sock_.send(buf.buf, buf.len); }
+        auto recv(in_buffer buf) const { return sock_.recv(buf.buf, buf.len); }
+        void sendall(out_buffer buf) const { for(auto end = buf.end(); buf.len;) buf.len -= send({end - buf.len, buf.len}); }
+        void recvall(in_buffer buf) const { for(auto end = buf.end(); buf.len;) buf.len -= recv({end - buf.len, buf.len}); }
+        auto & operator<<(std::string_view msg) const { return sendall(msg), *this; }
     private:
         net::socket sock_;
     };

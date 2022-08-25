@@ -42,6 +42,9 @@ namespace net::tcp {
             sock_.connect();
         }
 
+        using socket_io<connection>::send, socket_io<connection>::recv;
+        auto send(char const * buf, context::len_t len) const { return sock_.send(buf, len); }
+        auto recv(char * buf, context::len_t len) const { return sock_.recv(buf, len); }
     private:
         net::socket sock_;
     };

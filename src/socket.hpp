@@ -110,13 +110,11 @@ namespace net {
     public:
         constexpr socket_address(void * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, sso{} {}
         constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
-        constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_port, addr.sin_addr}, sso{true} {}
+        constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_family, addr.sin_port, addr.sin_addr}, sso{true} {}
         context::addr_len_t copy_to(sockaddr_storage & dst) const noexcept {
             if(sso) {
-                dst.ss_family = IP4;
-                auto ptr = &dst.ss_family + 1;
-                std::memcpy(ptr, &so, sizeof(so));
-                std::memset(ptr + sizeof(so), 0, 8);
+                std::memcpy(&dst, &so, sizeof(so));
+                std::memset(reinterpret_cast<char *>(&dst) + sizeof(so), 0, 8);
                 return sizeof(sockaddr_in);
             } else {
                 std::memcpy(&dst, addr.data, addr.size);
@@ -131,7 +129,7 @@ namespace net {
                 context::addr_len_t size;
             } addr;
             struct {
-                std::uint16_t port;
+                std::uint16_t family, port;
                 in_addr addr;
             } so;
         };
@@ -220,17 +218,15 @@ namespace net {
     friend T;
     private:
         socket_io() = default;
-        auto const & sock() const noexcept { return static_cast<T const *>(this)->sock_; }
+        constexpr auto down() const noexcept { return static_cast<T const *>(this); }
     public:
-        auto send(char const * buf, context::len_t len) const { return sock().send(buf, len); }
-        template<std::size_t N> auto send(char const (&buf)[N]) const { return send(buf, N); }
-        void sendall(char const * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= send(end - len, len); }
+        template<std::size_t N> auto send(char const (&buf)[N]) const { return down()->send(buf, N); }
+        void sendall(char const * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= down()->send(end - len, len); }
         template<std::size_t N> void sendall(char const (&buf)[N]) const { sendall(buf, N); }
         auto & operator<<(std::string_view msg) const { return sendall(msg.data(), msg.size()), *this; }
         auto & operator<<(char const * msg) const { return this->operator<<({msg}); }
-        auto recv(char * buf, context::len_t len) const { return sock().recv(buf, len); }
-        template<std::size_t N> auto recv(char (&buf)[N]) const { return recv(buf, N); }
-        void recvall(char * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= recv(end - len, len); }
+        template<std::size_t N> auto recv(char (&buf)[N]) const { return down()->recv(buf, N); }
+        void recvall(char * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= down()->recv(end - len, len); }
         template<std::size_t N> void recvall(char (&buf)[N]) const { recvall(buf, N); }
     };
 

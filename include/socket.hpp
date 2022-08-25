@@ -161,9 +161,10 @@ namespace net {
 
     class socket {
     private:
-        socket() = default;
         operator auto()       noexcept { return reinterpret_cast<sockaddr       *>(&addr_); }
         operator auto() const noexcept { return reinterpret_cast<sockaddr const *>(&addr_); }
+        socket(socket const &) = delete;
+        socket(context::socket_t listener) : addr_size_{sizeof(sockaddr_storage)}, sock_{::accept(listener, *this, &addr_size_)} { if(sock_ == context::invalid()) throw context::error("accept"); }
     public:
         void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
         void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
@@ -175,15 +176,7 @@ namespace net {
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }
         void listen(int backlog) { if(::listen(sock_, backlog)) throw context::error("listen"); }
-        socket accept() const {
-            socket s;
-            s.addr_size_ = sizeof(sockaddr_storage);
-            s.sock_ = ::accept(sock_, s, &s.addr_size_);
-            if(s.sock_ == context::invalid())
-                throw context::error("accept");
-            return s;
-        }
-
+        socket accept() const { return sock_; }
         auto send(char const * msg, context::len_t len, int flags = 0) const {
             if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
@@ -208,6 +201,7 @@ namespace net {
                 return received;
             throw context::error("recvfrom");
         }
+
     private:
         sockaddr_storage addr_;
         context::addr_len_t addr_size_;

@@ -218,6 +218,7 @@ namespace net {
     friend T;
     private:
         socket_io() = default;
+        constexpr auto down()       noexcept { return static_cast<T       *>(this); }
         constexpr auto down() const noexcept { return static_cast<T const *>(this); }
     public:
         template<std::size_t N> auto send(char const (&buf)[N]) const { return down()->send(buf, N); }
@@ -225,9 +226,9 @@ namespace net {
         template<std::size_t N> void sendall(char const (&buf)[N]) const { sendall(buf, N); }
         auto & operator<<(std::string_view msg) const { return sendall(msg.data(), msg.size()), *this; }
         auto & operator<<(char const * msg) const { return this->operator<<({msg}); }
-        template<std::size_t N> auto recv(char (&buf)[N]) const { return down()->recv(buf, N); }
-        void recvall(char * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= down()->recv(end - len, len); }
-        template<std::size_t N> void recvall(char (&buf)[N]) const { recvall(buf, N); }
+        template<std::size_t N> auto recv(char (&buf)[N]) { return down()->recv(buf, N); }
+        void recvall(char * buf, context::len_t len) { for(auto end = buf + len; len;) len -= down()->recv(end - len, len); }
+        template<std::size_t N> void recvall(char (&buf)[N]) { recvall(buf, N); }
     };
 
 };

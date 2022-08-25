@@ -4,8 +4,7 @@
 int main() {
 	try {
 		net::context c;
-		auto ep = net::endpoint(0, 3636);
-		net::socket sock{{&ep, sizeof(ep)}, net::DATAGRAM};
+		net::socket sock{net::endpoint(0, 3636), net::DATAGRAM};
 		sock.bind();
 		char buf[256];
 		for(;;) {

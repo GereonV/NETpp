@@ -15,6 +15,10 @@ client: SRCS+=$(SRCDIR)/client.$(SRCEXT)
 client: $(BIN)
 server: SRCS+=$(SRCDIR)/server.$(SRCEXT)
 server: $(BIN)
+udpclient: SRCS+=$(SRCDIR)/udpclient.$(SRCEXT)
+udpclient: $(BIN)
+udpserver: SRCS+=$(SRCDIR)/udpserver.$(SRCEXT)
+udpserver: $(BIN)
 
 $(BIN): clean dirs
 	$(C) $(SRCS) -o $@ $(CFLAGS)

@@ -108,11 +108,11 @@ namespace net {
 
     struct socket_address {
     public:
-        constexpr socket_address(void * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, sso{} {}
+        constexpr socket_address(void * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, soo{} {}
         constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
-        constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_family, addr.sin_port, addr.sin_addr}, sso{true} {}
+        constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_family, addr.sin_port, addr.sin_addr}, soo{true} {}
         context::addr_len_t copy_to(sockaddr_storage & dst) const noexcept {
-            if(sso) {
+            if(soo) {
                 std::memcpy(&dst, &so, sizeof(so));
                 std::memset(reinterpret_cast<char *>(&dst) + sizeof(so), 0, 8);
                 return sizeof(sockaddr_in);
@@ -133,7 +133,7 @@ namespace net {
                 in_addr addr;
             } so;
         };
-        bool sso;
+        bool soo;
     };
 
     struct socket_properies {

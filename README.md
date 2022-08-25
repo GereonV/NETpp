@@ -4,9 +4,11 @@ A small, dependency-free, header-only, cross-platform C++ library wrapping socke
 - Windows (Windows Sockets 2)
 - UNIX (Sockets + UNIX)
 
-This project is developed on a x86_64 machine running Windows 10 and GNU/Linux.
-
-This project is also *tested* on ARMv8 (64 Bit).
+This project:
+- is developed on a x86_64 machine running Windows 10 and GNU/Linux
+- is also *tested* on ARMv8 (64 Bit)
+- compiles flawlessly with `-Wpedantic -Wall -Wextra -Wconversion`
+- [uses the permissive MIT license](https://github.com/GereonV/NETpp/blob/master/LICENSE)
 
 ## Getting Started
 

@@ -108,7 +108,7 @@ namespace net {
 
     struct socket_address {
     public:
-        constexpr socket_address(void * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, soo{} {}
+        constexpr socket_address(void const * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, soo{} {}
         constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
         constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_family, addr.sin_port, addr.sin_addr}, soo{true} {}
         context::addr_len_t copy_to(sockaddr_storage & dst) const noexcept {
@@ -125,7 +125,7 @@ namespace net {
     private:
         union {
             struct {
-                void * data;
+                void const * data;
                 context::addr_len_t size;
             } addr;
             struct {
@@ -170,6 +170,7 @@ namespace net {
         socket(socket_address addr, socket_properies prop = {}) { reset(addr); resock(prop); }
         ~socket() { try { close(); } catch(std::exception & e) {} }
         constexpr auto family() const noexcept { return addr_.ss_family; }
+        constexpr operator socket_address() const noexcept { return {&addr_, addr_size_}; }
         void close() { context::close(sock_); }
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }

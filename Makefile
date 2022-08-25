@@ -1,9 +1,9 @@
 C:=g++
 SRCEXT:=cpp
-SRCDIR:=src
+SRCDIR:=doc
 BINDIR:=bin
 EXT:=
-CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3
+CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3 -Iinclude
 ifeq '$(OS)' 'Windows_NT'
 EXT:=.exe
 CFLAGS+= -lWs2_32

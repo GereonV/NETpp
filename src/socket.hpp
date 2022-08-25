@@ -28,6 +28,7 @@ namespace net {
     public:
 #ifdef _WIN32
     using socket_t = SOCKET;
+    using addr_len_t = int;
     using len_t = int;
         context() { if(WSAStartup(MAKEWORD(1, 1), &wsa_data_)) throw error("WSAStartup"); }
         ~context() { WSACleanup(); }
@@ -44,7 +45,8 @@ namespace net {
         WSADATA wsa_data_;
 #else
     using socket_t = int;
-    using len_t = socklen_t;
+    using addr_len_t = socklen_t;
+    using len_t = std::size_t;
         static constexpr socket_t invalid() noexcept { return -1; }
         static void close(socket_t sock) { if(::close(sock)) throw error("close"); }
         static std::runtime_error error(char const * fun, std::string err = strerror(errno)) {
@@ -106,10 +108,10 @@ namespace net {
 
     struct socket_address {
     public:
-        constexpr socket_address(void * addr, context::len_t addr_size) noexcept : addr{addr, addr_size}, sso{} {}
+        constexpr socket_address(void * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, sso{} {}
         constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
         constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_port, addr.sin_addr}, sso{true} {}
-        context::len_t copy_to(sockaddr_storage & dst) const noexcept {
+        context::addr_len_t copy_to(sockaddr_storage & dst) const noexcept {
             if(sso) {
                 dst.ss_family = IP4;
                 auto ptr = &dst.ss_family + 1;
@@ -126,7 +128,7 @@ namespace net {
         union {
             struct {
                 void * data;
-                context::len_t size;
+                context::addr_len_t size;
             } addr;
             struct {
                 std::uint16_t port;
@@ -165,11 +167,11 @@ namespace net {
         operator auto()       noexcept { return reinterpret_cast<sockaddr       *>(&addr_); }
         operator auto() const noexcept { return reinterpret_cast<sockaddr const *>(&addr_); }
     public:
+        void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
+        void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
         socket(socket_address addr, socket_properies prop = {}) { reset(addr); resock(prop); }
         ~socket() { try { close(); } catch(std::exception & e) {} }
         constexpr auto family() const noexcept { return addr_.ss_family; }
-        void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
-        void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
         void close() { context::close(sock_); }
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }
@@ -183,25 +185,25 @@ namespace net {
             return s;
         }
 
-        auto send(char const * msg, std::size_t len, int flags = 0) const {
+        auto send(char const * msg, context::len_t len, int flags = 0) const {
             if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
             throw context::error("send");
         }
 
-        auto recv(char * buf, std::size_t len, int flags = 0) const {
+        auto recv(char * buf, context::len_t len, int flags = 0) const {
             if(auto received = ::recv(sock_, buf, len, flags); received != -1)
                 return received;
             throw context::error("recv");
         }
 
-        auto sendto(char const * msg, std::size_t len, int flags = 0) const {
+        auto sendto(char const * msg, context::len_t len, int flags = 0) const {
             if(auto sent = ::sendto(sock_, msg, len, flags, *this, addr_size_); sent != -1)
                 return sent;
             throw context::error("sendto");
         }
 
-        auto recvfrom(char * buf, std::size_t len, int flags = 0) {
+        auto recvfrom(char * buf, context::len_t len, int flags = 0) {
             addr_size_ = sizeof(sockaddr_storage);
             if(auto received = ::recvfrom(sock_, buf, len, flags, *this, &addr_size_); received != -1)
                 return received;
@@ -209,7 +211,7 @@ namespace net {
         }
     private:
         sockaddr_storage addr_;
-        context::len_t addr_size_;
+        context::addr_len_t addr_size_;
         context::socket_t sock_;
     };
 
@@ -220,15 +222,15 @@ namespace net {
         socket_io() = default;
         auto const & sock() const noexcept { return static_cast<T const *>(this)->sock_; }
     public:
-        auto send(char const * buf, auto len) const { return sock().send(buf, len); }
+        auto send(char const * buf, context::len_t len) const { return sock().send(buf, len); }
         template<std::size_t N> auto send(char const (&buf)[N]) const { return send(buf, N); }
-        void sendall(char const * buf, auto len) const { for(auto end = buf + len; len;) len -= send(end - len, len); }
+        void sendall(char const * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= send(end - len, len); }
         template<std::size_t N> void sendall(char const (&buf)[N]) const { sendall(buf, N); }
         auto & operator<<(std::string_view msg) const { return sendall(msg.data(), msg.size()), *this; }
         auto & operator<<(char const * msg) const { return this->operator<<({msg}); }
-        auto recv(char * buf, auto len) const { return sock().recv(buf, len); }
+        auto recv(char * buf, context::len_t len) const { return sock().recv(buf, len); }
         template<std::size_t N> auto recv(char (&buf)[N]) const { return recv(buf, N); }
-        void recvall(char * buf, auto len) const { for(auto end = buf + len; len;) len -= recv(end - len, len); }
+        void recvall(char * buf, context::len_t len) const { for(auto end = buf + len; len;) len -= recv(end - len, len); }
         template<std::size_t N> void recvall(char (&buf)[N]) const { recvall(buf, N); }
     };
 

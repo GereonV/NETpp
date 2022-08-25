@@ -28,8 +28,8 @@ namespace net {
     public:
 #ifdef _WIN32
     using socket_t = SOCKET;
-    using addr_len_t = int;
     using len_t = int;
+    using fam_t = std::int16_t;
         context() { if(WSAStartup(MAKEWORD(1, 1), &wsa_data_)) throw error("WSAStartup"); }
         ~context() { WSACleanup(); }
         static constexpr socket_t invalid() noexcept { return INVALID_SOCKET; }
@@ -45,8 +45,8 @@ namespace net {
         WSADATA wsa_data_;
 #else
     using socket_t = int;
-    using addr_len_t = socklen_t;
     using len_t = std::size_t;
+    using fam_t = std::uint16_t;
         static constexpr socket_t invalid() noexcept { return -1; }
         static void close(socket_t sock) { if(::close(sock)) throw error("close"); }
         static std::runtime_error error(char const * fun, std::string err = strerror(errno)) {
@@ -108,10 +108,10 @@ namespace net {
 
     struct socket_address {
     public:
-        constexpr socket_address(void const * addr, context::addr_len_t addr_size) noexcept : addr{addr, addr_size}, soo{} {}
-        constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
+        constexpr socket_address(void const * addr, socklen_t addr_size) noexcept : addr{addr, addr_size}, soo{} {}
+        constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, static_cast<socklen_t>(info.ai_addrlen)} {}
         constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_family, addr.sin_port, addr.sin_addr}, soo{true} {}
-        context::addr_len_t copy_to(sockaddr_storage & dst) const noexcept {
+        socklen_t copy_to(sockaddr_storage & dst) const noexcept {
             if(soo) {
                 std::memcpy(&dst, &so, sizeof(so));
                 std::memset(reinterpret_cast<char *>(&dst) + sizeof(so), 0, 8);
@@ -126,10 +126,11 @@ namespace net {
         union {
             struct {
                 void const * data;
-                context::addr_len_t size;
+                socklen_t size;
             } addr;
             struct {
-                std::uint16_t family, port;
+                context::fam_t family;
+                std::uint16_t port;
                 in_addr addr;
             } so;
         };
@@ -164,7 +165,7 @@ namespace net {
         operator auto()       noexcept { return reinterpret_cast<sockaddr       *>(&addr_); }
         operator auto() const noexcept { return reinterpret_cast<sockaddr const *>(&addr_); }
         socket(socket const &) = delete;
-        socket(context::socket_t listener) : addr_size_{sizeof(sockaddr_storage)}, sock_{::accept(listener, *this, &addr_size_)} { if(sock_ == context::invalid()) throw context::error("accept"); }
+        socket(context::socket_t listener) : addr_size_{sizeof(sockaddr_storage)} { if((sock_ = ::accept(listener, *this, &addr_size_)) == context::invalid()) throw context::error("accept"); }
     public:
         void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
         void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
@@ -204,14 +205,14 @@ namespace net {
 
     private:
         sockaddr_storage addr_;
-        context::addr_len_t addr_size_;
         context::socket_t sock_;
+        socklen_t addr_size_;
     };
 
     template<typename T>
     struct buffer {
         constexpr buffer(T * buf, context::len_t len) noexcept : buf{buf}, len{len} {}
-        constexpr buffer(std::string_view sv) noexcept : buf{sv.data()}, len{sv.size()} {}
+        constexpr buffer(std::string_view sv) noexcept : buf{sv.data()}, len{static_cast<context::len_t>(sv.size())} {}
         template<std::size_t N> constexpr buffer(T (&buf)[N]) noexcept : buf{buf}, len{N} {}
         constexpr auto begin() const noexcept { return buf; }
         constexpr auto end() const noexcept { return buf + len; }

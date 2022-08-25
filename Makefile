@@ -1,36 +1,23 @@
 C:=g++
 SRCEXT:=cpp
 SRCDIR:=src
-BIN:=bin/program
-
+BINDIR:=bin
+EXT:=
 CFLAGS:=-std=c++20 -Wpedantic -Wall -Wextra -Wconversion -O3
-SRCS:=
 ifeq '$(OS)' 'Windows_NT'
-BIN:=$(BIN).exe
+EXT:=.exe
 CFLAGS+= -lWs2_32
 endif
 
-.PHONY: client server dirs clean
-client: SRCS+=$(SRCDIR)/client.$(SRCEXT)
-client: $(BIN)
-server: SRCS+=$(SRCDIR)/server.$(SRCEXT)
-server: $(BIN)
-udpclient: SRCS+=$(SRCDIR)/udpclient.$(SRCEXT)
-udpclient: $(BIN)
-udpserver: SRCS+=$(SRCDIR)/udpserver.$(SRCEXT)
-udpserver: $(BIN)
-
-$(BIN): clean dirs
-	$(C) $(SRCS) -o $@ $(CFLAGS)
+.PHONY: all server client udpserver udpclient dirs clean
+all: server client udpserver udpclient
+server: $(BINDIR)/server$(EXT)
+client: $(BINDIR)/client$(EXT)
+udpserver: $(BINDIR)/udpserver$(EXT)
+udpclient: $(BINDIR)/udpclient$(EXT)
+$(BINDIR)/%$(EXT): $(SRCDIR)/%.$(SRCEXT) $(SRCDIR)/*
+	$(C) $< -o $@ $(CFLAGS)
 dirs:
-	mkdir -p $(dir $(BIN))
+	mkdir -p $(dir $(BINDIR))
 clean:
-	rm -rf $(BIN)
-ifneq '$(OS)' 'Windows_NT'
-INSTALLPATH=/usr/local/bin/$(notdir $(BIN))
-.PHONY: install uninstall
-install: release
-	install -m 755 $(BIN) $(INSTALLPATH)
-uninstall:
-	rm -f $(INSTALLPATH)
-endif
+	rm -rf $(BINDIR)/*

@@ -97,34 +97,43 @@ namespace net {
 
     constexpr sockaddr_in endpoint(std::uint32_t ip_addr, std::uint16_t port) noexcept {
         return {
-            .sin_family = AF_INET,
+            .sin_family = IP4,
             .sin_port = endian(port),
             .sin_addr = context::addr(endian(ip_addr)),
             .sin_zero = {}
         };
     }
 
-    using addrinfo_list = std::unique_ptr<addrinfo, decltype([](addrinfo * ai) { freeaddrinfo(ai); })>;
-
-    inline addrinfo_list endpoints(char const * name, char const * service, int socktype = STREAM, int family = ANY) {
-        addrinfo hints, * res;
-        hints.ai_flags = AI_PASSIVE; // loopback address if !name
-        hints.ai_family = family;
-        hints.ai_socktype = socktype;
-        hints.ai_addrlen = hints.ai_protocol = 0; // automatic based on type
-        hints.ai_addr = nullptr;
-        hints.ai_canonname = nullptr;
-        hints.ai_next = nullptr;
-        if(auto ecode = getaddrinfo(name, service, &hints, &res); ecode)
-            throw context::gai_error(ecode);
-        return {res, {}};
-    }
-
     struct socket_address {
-        constexpr socket_address(void * addr, context::len_t addr_size) noexcept : data{addr}, size{addr_size} {}
+    public:
+        constexpr socket_address(void * addr, context::len_t addr_size) noexcept : addr{addr, addr_size}, sso{} {}
         constexpr socket_address(addrinfo const & info) noexcept : socket_address{info.ai_addr, info.ai_addrlen} {}
-        void * data;
-        context::len_t size;
+        constexpr socket_address(sockaddr_in const & addr) noexcept : so{addr.sin_port, addr.sin_addr}, sso{true} {}
+        context::len_t copy_to(sockaddr_storage & dst) const noexcept {
+            if(sso) {
+                dst.ss_family = IP4;
+                auto ptr = &dst.ss_family + 1;
+                std::memcpy(ptr, &so, sizeof(so));
+                std::memset(ptr + sizeof(so), 0, 8);
+                return sizeof(sockaddr_in);
+            } else {
+                std::memcpy(&dst, addr.data, addr.size);
+                return addr.size;
+            }
+        }
+
+    private:
+        union {
+            struct {
+                void * data;
+                context::len_t size;
+            } addr;
+            struct {
+                std::uint16_t port;
+                in_addr addr;
+            } so;
+        };
+        bool sso;
     };
 
     struct socket_properies {
@@ -135,6 +144,23 @@ namespace net {
         int protocol{};
     };
 
+    using addrinfo_list = std::unique_ptr<addrinfo, decltype([](addrinfo * ai) { freeaddrinfo(ai); })>;
+
+    inline addrinfo_list endpoints(char const * name, char const * service, socket_properies prop = {}, int family = ANY) {
+        addrinfo hints, * res;
+        hints.ai_flags = AI_PASSIVE; // loopback address if !name
+        hints.ai_family = family;
+        hints.ai_socktype = prop.socktype;
+        hints.ai_protocol = prop.protocol;
+        hints.ai_addrlen = 0;
+        hints.ai_addr = nullptr;
+        hints.ai_canonname = nullptr;
+        hints.ai_next = nullptr;
+        if(auto ecode = getaddrinfo(name, service, &hints, &res); ecode)
+            throw context::gai_error(ecode);
+        return {res, {}};
+    }
+
     class socket {
     private:
         socket() = default;
@@ -144,7 +170,7 @@ namespace net {
         socket(socket_address addr, socket_properies prop = {}) { reset(addr); resock(prop); }
         ~socket() { try { close(); } catch(std::exception & e) {} }
         constexpr auto family() const noexcept { return addr_.ss_family; }
-        void reset(socket_address addr) { std::memcpy(*this, addr.data, addr_size_ = addr.size); }
+        void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
         void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
         void close() { context::close(sock_); }
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }

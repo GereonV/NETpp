@@ -11,6 +11,13 @@ namespace net::udp {
         void send(out_buffer buf) const { sock_.sendto(buf.buf, buf.len); }
         auto recv(in_buffer buf) { return sock_.recvfrom(buf.buf, buf.len); }
         auto & operator<<(std::string_view sv) const { return send(sv), *this; }
+        constexpr socket_address peer() const { return sock_; }
+        void connect() { sock_.connect(); }
+        void connect(socket_address addr) {
+            sock_.reset(addr);
+            connect();
+        }
+
     private:
         net::socket sock_;
     };

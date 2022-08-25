@@ -4,13 +4,11 @@
 int main() {
 	try {
 		net::context c;
-		net::socket sock{net::endpoint(0, 3636), net::DATAGRAM};
-		sock.bind();
+		net::udp::server server{net::endpoint(0, 3636)};
 		char buf[256];
 		for(;;) {
-            std::cout.write(buf, sock.recvfrom(buf, sizeof(buf)));
-            std::cout << std::endl;
-            sock.sendto("HELLO! :)", 9);
+			std::cout.write(buf, server.recv(buf)).flush();
+			server << "HELLO! :)\n";
 		}
 	} catch(std::exception & e) {
 		std::cerr << e.what() << '\n';

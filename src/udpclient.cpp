@@ -7,10 +7,9 @@ int main(int argc, char const ** argv) {
 			throw std::invalid_argument{"Provide name and port"};
 		net::context c;
 		net::udp::connection conn{*net::endpoints(argv[1], argv[2])};
-        conn.send("LOL", 3);
+		conn << "LOL";
         char buf[256];
-        auto len = conn.recv(buf);
-        std::cout.write(buf, len);
+        std::cout.write(buf, conn.recv(buf));
 	} catch(std::exception & e) {
 		std::cerr << e.what() << '\n';
 		return -1;

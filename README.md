@@ -14,8 +14,8 @@ This project:
 
 ### General
 
-- choose between [the newest version](https://github.com/GereonV/NETpp/tree/master) or [the most recent release](https://github.com/GereonV/NETpp/releases)
-- make the header-files excessable via your include-path
+- get [the most recent version](https://github.com/GereonV/NETpp/releases/latest)
+- make the header-files accessible via your include-path
 - include them whereever you need
 
 ### Compatibility
@@ -28,9 +28,26 @@ This project:
 
 ## Help
 
-- first-time users are encouraged to look at [the examples](https://github.com/GereonV/NETpp/tree/master/doc).
-- ask for anything in the discussion-section
+- first-time users are encouraged to look at [the examples](https://github.com/GereonV/NETpp/tree/master/doc)
+- ask for anything in the discussion-section ([go to guide](#discussions))
 
 ## Contributing
+
+**Please use the appropriate feature! :)**
+
+### [Issues](https://github.com/GereonV/NETpp/issues)
+- bug-reports (will be labeled *bug*)
+- concrete request about changes to the code (will be labeled *enhancement*)
+- shortcomings of the documentation/examples (will be labeled *documentation*)
+
+### [Discussions](https://github.com/GereonV/NETpp/discussions)
+
+- **Q&A**: ask questions on how to use the library
+- **Ideas**: present ideas about new features
+- **Polls**: survey opinions
+- **Show and tell**: share experiences using the library
+- **General**: anything else
+
+### [PRs](https://github.com/GereonV/NETpp/pulls)
 
 PRs are open and help is much appreciated - just follow the commit-style and use common sense

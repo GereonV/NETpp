@@ -137,11 +137,9 @@ namespace net {
     };
 
     struct socket_properies {
-        socket_properies() = default;
-        constexpr socket_properies(int socktype) : socktype{socktype} {}
-        constexpr socket_properies(int socktype, int protocol) : socktype{socktype}, protocol{protocol} {}
-        int socktype{STREAM};
-        int protocol{};
+        constexpr socket_properies(int socktype = STREAM, int protocol = 0) noexcept : socktype{socktype}, protocol{protocol} {}
+        int socktype;
+        int protocol;
     };
 
     using addrinfo_list = std::unique_ptr<addrinfo, decltype([](addrinfo * ai) { freeaddrinfo(ai); })>;

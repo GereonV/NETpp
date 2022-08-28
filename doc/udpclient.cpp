@@ -5,7 +5,7 @@ int main(int argc, char const ** argv) {
 	try {
 		if(argc < 3)
 			throw std::invalid_argument{"Provide name and port"};
-		net::context c;
+		NET_INIT()
 		net::udp::connection conn{*net::endpoints(argv[1], argv[2])};
 		conn << "LOL";
         char buf[256];

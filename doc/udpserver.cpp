@@ -3,7 +3,7 @@
 
 int main() {
 	try {
-		net::context c;
+		NET_INIT()
 		net::udp::server server{net::endpoint(0, 3636)};
 		char buf[256];
 		for(;;) {

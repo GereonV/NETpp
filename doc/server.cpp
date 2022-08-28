@@ -10,7 +10,7 @@ std::string daytime() noexcept {
 
 int main() {
 	try {
-		net::context c;
+		NET_INIT()
 		net::tcp::server server{net::endpoint(0, 13), 10};
 		for(;;) {
 			net::tcp::connection serv{server};

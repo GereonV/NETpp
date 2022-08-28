@@ -27,6 +27,7 @@ namespace net {
     class context {
     public:
 #ifdef _WIN32
+    #define NET_INIT() net::context _c;
     using socket_t = SOCKET;
     using len_t = int;
     using fam_t = std::int16_t;
@@ -44,6 +45,7 @@ namespace net {
     private:
         WSADATA wsa_data_;
 #else
+    #define NET_INIT()
     using socket_t = int;
     using len_t = std::size_t;
     using fam_t = std::uint16_t;

@@ -21,7 +21,7 @@ This project:
 ### Compatibility
 
 - Windows:
-    - make sure to create a `net::context` **before** using anything
+    - make sure to create a `net::context` **before** using anything (available as macro `NET_INIT()`)
     - link against `Ws2_32`
 - UNIX:
     - `net::udp::server::connect()` may work multiple times

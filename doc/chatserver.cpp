@@ -11,7 +11,7 @@ struct connection_block {
 
 int main() {
 	try {
-		net::context c;
+		NET_INIT()
 		net::tcp::server server{net::endpoint(0, 42069), 10};
         connection_block * connections{};
         std::mutex conn_mutex;

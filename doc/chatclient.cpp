@@ -8,14 +8,14 @@ int main(int argc, char const * const * argv) {
 	try {
 		if(argc < 2)
 			throw std::invalid_argument{"Provide name"};
-        net::context c;
+        NET_INIT()
         net::tcp::connection conn{net::endpoints(argv[1], "42069").get()};
         bool open{true};
         std::mutex mutex;
         std::thread read_thread{[&]() {
             char buf[4096];
             for(auto rcv = conn.recv(buf); rcv; rcv = conn.recv(buf))
-                std::cout.write(buf, rcv);
+                std::cout.write(buf, rcv).flush();
             std::scoped_lock{mutex};
             open = false;
         }};

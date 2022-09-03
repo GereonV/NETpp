@@ -9,28 +9,30 @@ struct connection_block {
     connection_block * next, * prev{};
 };
 
+connection_block * connections;
+std::mutex conn_mutex;
+
 int main() {
-	try {
-		NET_INIT()
-		net::tcp::server server{net::endpoint(0, 42069), 10};
-        connection_block * connections{};
-        std::mutex conn_mutex;
+    try {
+        NET_INIT()
+        net::tcp::server server{net::endpoint(0, 42069), 10};
         for(;;) {
-            auto block = new connection_block{{server}, connections};
+            auto block = new connection_block{server, connections};
             std::scoped_lock create_lock{conn_mutex};
             if(connections)
                 connections->prev = block;
             connections = block;
-            std::thread{[block, &connections, &conn_mutex]() {
+            std::thread{[=]() {
                 char buf[4096];
                 for(;;) {
-                    auto rcv = block->conn.recv(buf);
+                    net::context::len_t rcv;
+                    try { rcv = block->conn.recv(buf); } catch(std::exception &) { rcv = 0; }
                     if(!rcv)
                         break;
                     std::scoped_lock send_lock{conn_mutex};
                     for(auto ptr = connections; ptr; ptr = ptr->next)
                         if(ptr != block)
-                            ptr->conn.sendall({buf, rcv});
+                            try { ptr->conn.sendall({ buf, rcv }); } catch(std::exception &) {}
                 }
                 std::scoped_lock delete_lock{conn_mutex};
                 if(block->prev)
@@ -42,8 +44,8 @@ int main() {
                 delete block;
             }}.detach();
         }
-	} catch(std::exception & e) {
-		std::cerr << e.what() << '\n';
-		return -1;
-	}
+    } catch(std::exception & e) {
+        std::cerr << e.what() << '\n';
+        return -1;
+    }
 }

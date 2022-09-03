@@ -20,7 +20,7 @@ int main(int argc, char const * const * argv) {
             open = false;
         }};
         std::string in;
-        while(std::scoped_lock open_lock{mutex}, open) {
+        while(std::scoped_lock{mutex}, open) {
             std::getline(std::cin, in);
             conn << (in + '\n');
         }

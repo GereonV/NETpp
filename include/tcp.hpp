@@ -27,7 +27,7 @@ namespace net::tcp {
                 try {
                     sock_.connect();
                     return;
-                } catch(std::runtime_error & e) {
+                } catch(std::runtime_error &) {
                     sock_.reset(*info);
                     auto new_fam = sock_.family();
                     if(new_fam == fam)

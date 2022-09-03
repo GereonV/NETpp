@@ -6,6 +6,7 @@
 #include <cstring>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #ifdef _WIN32
 #include <winsock2.h>
@@ -30,7 +31,7 @@ namespace net {
     #define NET_INIT() net::context _c;
     using socket_t = SOCKET;
     using len_t = int;
-    using fam_t = std::int16_t;
+    using fam_t = ADDRESS_FAMILY;
         context() { if(WSAStartup(MAKEWORD(1, 1), &wsa_data_)) throw error("WSAStartup"); }
         ~context() { WSACleanup(); }
         static constexpr socket_t invalid() noexcept { return INVALID_SOCKET; }
@@ -172,7 +173,7 @@ namespace net {
         void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
         void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
         socket(socket_address addr, socket_properies prop = {}) { reset(addr); resock(prop); }
-        ~socket() { try { close(); } catch(std::exception & e) {} }
+        ~socket() { try { close(); } catch(std::exception &) {} }
         constexpr auto family() const noexcept { return addr_.ss_family; }
         constexpr operator socket_address() const noexcept { return {&addr_, addr_size_}; }
         void close() { context::close(sock_); }

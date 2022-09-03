@@ -16,11 +16,11 @@ int main(int argc, char const * const * argv) {
             char buf[4096];
             for(auto rcv = conn.recv(buf); rcv; rcv = conn.recv(buf))
                 std::cout.write(buf, rcv).flush();
-            std::scoped_lock{mutex};
+            std::scoped_lock open_lock{mutex};
             open = false;
         }};
         std::string in;
-        while(std::scoped_lock{mutex}, open) {
+        while(std::scoped_lock open_lock{mutex}, open) {
             std::getline(std::cin, in);
             conn << (in + '\n');
         }

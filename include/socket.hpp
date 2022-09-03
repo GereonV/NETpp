@@ -176,6 +176,7 @@ namespace net {
         ~socket() { try { close(); } catch(std::exception &) {} }
         constexpr auto family() const noexcept { return addr_.ss_family; }
         constexpr operator socket_address() const noexcept { return {&addr_, addr_size_}; }
+        void shutdown(int how = 2) { if(::shutdown(sock_, how)) throw context::error("shutdown"); }
         void close() { context::close(sock_); }
         void connect() { if(::connect(sock_, *this, addr_size_)) throw context::error("connect"); }
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }

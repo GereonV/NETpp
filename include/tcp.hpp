@@ -40,6 +40,7 @@ namespace net::tcp {
             sock_.connect();
         }
 
+        ~connection() { try { sock_.shutdown(); } catch(std::exception &) {} }
         auto send(out_buffer buf) const { return sock_.send(buf.buf, buf.len); }
         auto recv(in_buffer buf) const { return sock_.recv(buf.buf, buf.len); }
         void sendall(out_buffer buf) const { for(auto end = buf.end(); buf.len;) buf.len -= send({end - buf.len, buf.len}); }

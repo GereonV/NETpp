@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -12,8 +13,9 @@
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 #else
-#include <sys/socket.h>
 #include <netdb.h>
+#include <poll.h>
+#include <sys/socket.h>
 #include <unistd.h> // close()
 #endif
 
@@ -24,6 +26,19 @@ namespace net {
                          IP6 = AF_INET6,
                          STREAM = SOCK_STREAM,
                          DATAGRAM = SOCK_DGRAM;
+
+    struct poll : private pollfd {
+    friend class context;
+        static constexpr auto in = POLLIN,
+                              out = POLLOUT,
+                              pri = POLLPRI,
+                              err = POLLERR,
+                              hup = POLLHUP,
+                              nval = POLLNVAL;
+        constexpr poll(auto sock, short events) : pollfd{sock, events, 0} {}
+        constexpr void set(short events) noexcept { this->events = events; }
+        constexpr short get() noexcept { return revents; }
+    };
 
     class context {
     public:
@@ -43,6 +58,12 @@ namespace net {
 
         static auto gai_error(int ecode) { return error("getaddrinfo", std::to_string(ecode)); }
         static constexpr in_addr addr(std::uint32_t addr) noexcept { return {{.S_addr = addr}}; }
+        static int poll(std::span<poll> fds, int timeout) {
+            if(auto num = WSAPoll(fds.data(), fds.size(), timeout); num != SOCKET_ERROR)
+                return num;
+            throw error("WSAPoll");
+        }
+
     private:
         WSADATA wsa_data_;
 #else
@@ -59,6 +80,11 @@ namespace net {
 
         static auto gai_error(int ecode) { return error("getaddrinfo", gai_strerror(ecode)); }
         static constexpr in_addr addr(std::uint32_t addr) noexcept { return {addr}; }
+        static int poll(std::span<poll> fds, int timeout) {
+            if(auto num = ::poll(fds.data(), fds.size(), timeout); num != -1)
+                return num;
+            throw error("poll");
+        }
 #endif
     };
 
@@ -182,6 +208,7 @@ namespace net {
         void bind() { if(::bind(sock_, *this, addr_size_)) throw context::error("bind"); }
         void listen(int backlog) { if(::listen(sock_, backlog)) throw context::error("listen"); }
         socket accept() const { return sock_; }
+        constexpr poll pollfd(short events) const noexcept { return {sock_, events}; }
         auto send(char const * msg, context::len_t len, int flags = 0) const {
             if(auto sent = ::send(sock_, msg, len, flags); sent != -1)
                 return sent;
@@ -215,7 +242,7 @@ namespace net {
 
     template<typename T>
     struct buffer {
-        constexpr buffer(T * buf, context::len_t len) noexcept : buf{buf}, len{len} {}
+        constexpr buffer(T * buf, auto len) noexcept : buf{buf}, len{static_cast<context::len_t>(len)} {}
         constexpr buffer(std::string_view sv) noexcept : buf{sv.data()}, len{static_cast<context::len_t>(sv.size())} {}
         template<std::size_t N> constexpr buffer(T (&buf)[N]) noexcept : buf{buf}, len{N} {}
         constexpr auto begin() const noexcept { return buf; }

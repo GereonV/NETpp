@@ -13,6 +13,7 @@ namespace net::tcp {
             sock_.listen(backlog);
         }
 
+        constexpr auto pollfd() const noexcept { return sock_.pollfd(poll::in); }
     private:
         net::socket sock_;
     };
@@ -41,6 +42,7 @@ namespace net::tcp {
         }
 
         ~connection() { try { sock_.shutdown(); } catch(std::exception &) {} }
+        constexpr auto pollfd(short events = poll::in) const noexcept { return sock_.pollfd(events); }
         auto send(out_buffer buf) const { return sock_.send(buf.buf, buf.len); }
         auto recv(in_buffer buf) const { return sock_.recv(buf.buf, buf.len); }
         void sendall(out_buffer buf) const { for(auto end = buf.end(); buf.len;) buf.len -= send({end - buf.len, buf.len}); }

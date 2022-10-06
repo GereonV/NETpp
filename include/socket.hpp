@@ -199,7 +199,7 @@ namespace net {
         void reset(socket_address addr) { addr_size_ = addr.copy_to(addr_); }
         void resock(socket_properies prop = {}) { if((sock_ = ::socket(addr_.ss_family, prop.socktype, prop.protocol)) == context::invalid()) throw context::error("accept"); }
         socket(socket_address addr, socket_properies prop = {}) { reset(addr); resock(prop); }
-        ~socket() { try { close(); } catch(std::exception &) {} }
+        ~socket() try { close(); } catch(std::exception &) {}
         constexpr auto family() const noexcept { return addr_.ss_family; }
         constexpr operator socket_address() const noexcept { return {&addr_, addr_size_}; }
         void shutdown(int how = 2) { if(::shutdown(sock_, how)) throw context::error("shutdown"); }

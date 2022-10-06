@@ -41,7 +41,7 @@ namespace net::tcp {
             sock_.connect();
         }
 
-        ~connection() { try { sock_.shutdown(); } catch(std::exception &) {} }
+        ~connection() try { sock_.shutdown(); } catch(std::exception &) {}
         constexpr auto pollfd(short events = poll::in) const noexcept { return sock_.pollfd(events); }
         auto send(out_buffer buf) const { return sock_.send(buf.buf, buf.len); }
         auto recv(in_buffer buf) const { return sock_.recv(buf.buf, buf.len); }

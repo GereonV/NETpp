@@ -8,17 +8,14 @@ std::string daytime() noexcept {
 	return std::ctime(&now);
 }
 
-int main() {
-	try {
-		NET_INIT()
-		net::tcp::server server{net::endpoint(0, 13), 10};
-		for(;;) {
-			net::tcp::connection serv{server};
-			serv << daytime();
-		}
-	} catch(std::exception & e) {
-		std::cerr << e.what() << '\n';
-		return -1;
+int main() try {
+	NET_INIT()
+	net::tcp::server server{net::endpoint(0, 13), 10};
+	for(;;) {
+		net::tcp::connection serv{server};
+		serv << daytime();
 	}
+} catch(std::exception & e) {
+	std::cerr << e.what() << '\n';
+	return -1;
 }
-

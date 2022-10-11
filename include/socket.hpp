@@ -120,10 +120,10 @@ namespace net {
         if constexpr(std::endian::native == std::endian::big)
             return val;
         auto max_shift = 8 * sizeof(T) - 8;
-        auto n = static_cast<T>(val >> max_shift & 0xFF);
+        auto n = val >> max_shift & 0xFF;
         for(std::size_t shift{8}; shift <= max_shift; shift += 8)
             n |= (val >> (max_shift - shift) & 0xFF) << shift;
-        return n;
+        return static_cast<T>(n);
     }
 
     constexpr sockaddr_in endpoint(std::uint32_t ip_addr, std::uint16_t port) noexcept {

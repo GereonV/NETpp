@@ -41,6 +41,10 @@ namespace net::tcp {
             sock_.connect();
         }
 
+        constexpr auto peer(sockaddr_storage & dst) const noexcept {
+            return static_cast<socket_address>(sock_).copy_to(dst);
+        }
+
         ~connection() try { sock_.shutdown(); } catch(std::exception &) {}
         constexpr auto pollfd(short events = poll::in) const noexcept { return sock_.pollfd(events); }
         auto send(out_buffer buf) const { return sock_.send(buf.buf, buf.len); }
